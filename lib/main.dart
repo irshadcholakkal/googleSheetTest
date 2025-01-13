@@ -1,7 +1,5 @@
-
-
-
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -9,16 +7,11 @@ import 'custom_image_view.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
-void main() async{
-   WidgetsFlutterBinding.ensureInitialized();
-//   await Firebase.initializeApp(
-//     options: DefaultFirebaseOptions.currentPlatform,
-// );
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(const MyApp());
 }
-
-
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -41,17 +34,15 @@ class MenuScreen extends StatefulWidget {
   _MenuScreenState createState() => _MenuScreenState();
 }
 
-
-
 class _MenuScreenState extends State<MenuScreen> {
-  final String googleScriptUrl = "https://script.google.com/macros/s/AKfycbyP8JO7o-71084AHpanyVkdsVCT7zJCfTmVz8eXuxcAFEL_jj36WTDEk_iVomuVAZhBAA/exec";
+  final String googleScriptUrl =
+      "https://script.google.com/macros/s/AKfycbyP8JO7o-71084AHpanyVkdsVCT7zJCfTmVz8eXuxcAFEL_jj36WTDEk_iVomuVAZhBAA/exec";
   List<Map<String, dynamic>> menu = [];
-  Map<String, int> cart = {}; 
+  Map<String, int> cart = {};
   String tableNumber = "Unknown";
   String searchQuery = "";
-   bool _loading = false;
+  bool _loading = false;
 
-  
   @override
   void initState() {
     super.initState();
@@ -67,30 +58,31 @@ class _MenuScreenState extends State<MenuScreen> {
     });
   }
 
- 
   Future<void> fetchMenu() async {
-  final response = await http.get(Uri.parse("$googleScriptUrl?action=getMenu"));
-  if (response.statusCode == 200) {
-    try {
-      final data = json.decode(response.body);
-      if (data is List) {
-        setState(() {
-          menu = List<Map<String, dynamic>>.from(data);
-        });
-      } else if (data is Map && data.containsKey('error')) {
-        debugPrint("Error from script: ${data['error']}");
-      } else {
-        debugPrint("Invalid data format: ${data}");
+    final response =
+        await http.get(Uri.parse("$googleScriptUrl?action=getMenu"));
+    if (response.statusCode == 200) {
+      try {
+        final data = json.decode(response.body);
+        if (data is List) {
+          setState(() {
+            menu = List<Map<String, dynamic>>.from(data);
+          });
+        } else if (data is Map && data.containsKey('error')) {
+          debugPrint("Error from script: ${data['error']}");
+        } else {
+          debugPrint("Invalid data format: ${data}");
+        }
+      } catch (e) {
+        debugPrint("Error decoding JSON: $e");
+        debugPrint("Response body: ${response.body}");
       }
-    } catch (e) {
-      debugPrint("Error decoding JSON: $e");
-      debugPrint("Response body: ${response.body}");
+    } else {
+      debugPrint("Failed to load menu: ${response.body}");
     }
-  } else {
-    debugPrint("Failed to load menu: ${response.body}");
   }
-  }
-   void addToCart(String itemId) {
+
+  void addToCart(String itemId) {
     setState(() {
       cart[itemId] = (cart[itemId] ?? 0) + 1;
     });
@@ -107,8 +99,7 @@ class _MenuScreenState extends State<MenuScreen> {
     });
   }
 
-
-    Future<void> placeOrder() async {
+  Future<void> placeOrder() async {
     try {
       setState(() {
         _loading = true;
@@ -121,7 +112,7 @@ class _MenuScreenState extends State<MenuScreen> {
             (element) => element['id'].toString() == itemId,
             orElse: () => throw Exception('Item not found: $itemId'),
           );
-         
+
           return "${entry.value}x ${item['name']}\n";
         } catch (e) {
           debugPrint('Error processing item ${entry.key}: $e');
@@ -130,7 +121,6 @@ class _MenuScreenState extends State<MenuScreen> {
       }).join("");
 
       if (orderDetails.isEmpty) {
-        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Cart is empty!")),
         );
@@ -138,24 +128,24 @@ class _MenuScreenState extends State<MenuScreen> {
       }
 
       debugPrint("Order details: $orderDetails");
-       final total = cart.entries.fold<double>(
-                    0,
-                    (sum, entry) {
-                      final item = menu.firstWhere((i) => i['id'].toString() == entry.key);
-                      final price = double.tryParse(item['price'].toString()) ?? 0.0;
-                      return sum + (price * entry.value);
-                    },
-                  );
+      final total = cart.entries.fold<double>(
+        0,
+        (sum, entry) {
+          final item = menu.firstWhere((i) => i['id'].toString() == entry.key);
+          final price = double.tryParse(item['price'].toString()) ?? 0.0;
+          return sum + (price * entry.value);
+        },
+      );
       final response = await http.get(Uri.parse(
-        "$googleScriptUrl?action=placeOrder&table=$tableNumber&order=$orderDetails&amount=$total"));
-         debugPrint("Order details: ADDEDDDD");
-         debugPrint("Order details: ${response.statusCode}");
+          "$googleScriptUrl?action=placeOrder&table=$tableNumber&order=$orderDetails&amount=$total"));
+      debugPrint("Order details: ADDEDDDD");
+      debugPrint("Order details: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         Navigator.of(context).pop();
-         setState(() {
-        _loading = false;
-      });
+        setState(() {
+          _loading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Order placed successfully!")),
         );
@@ -176,7 +166,10 @@ class _MenuScreenState extends State<MenuScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredMenu = menu.where((item) {
-      return item['name'].toString().toLowerCase().contains(searchQuery.toLowerCase());
+      return item['name']
+          .toString()
+          .toLowerCase()
+          .contains(searchQuery.toLowerCase());
     }).toList();
 
     return Scaffold(
@@ -188,26 +181,28 @@ class _MenuScreenState extends State<MenuScreen> {
             onPressed: () {
               showModalBottomSheet(
                 backgroundColor: Colors.white,
-
                 context: context,
                 builder: (context) {
-                  final cartItems = cart.entries
-                      .map((entry) {
-                        final item = menu.firstWhere((i) => i['id'].toString() == entry.key);
-                        // Convert price to double for calculation
-                        final price = double.tryParse(item['price'].toString()) ?? 0.0;
-                        return ListTile(
-                          title: Text("${item['name']} x${entry.value}"),
-                          trailing: Text("₹${(price * entry.value).toStringAsFixed(2)}"),
-                        );
-                      })
-                      .toList();
+                  final cartItems = cart.entries.map((entry) {
+                    final item =
+                        menu.firstWhere((i) => i['id'].toString() == entry.key);
+                    // Convert price to double for calculation
+                    final price =
+                        double.tryParse(item['price'].toString()) ?? 0.0;
+                    return ListTile(
+                      title: Text("${item['name']} x${entry.value}"),
+                      trailing:
+                          Text("₹${(price * entry.value).toStringAsFixed(2)}"),
+                    );
+                  }).toList();
 
                   final total = cart.entries.fold<double>(
                     0,
                     (sum, entry) {
-                      final item = menu.firstWhere((i) => i['id'].toString() == entry.key);
-                      final price = double.tryParse(item['price'].toString()) ?? 0.0;
+                      final item = menu
+                          .firstWhere((i) => i['id'].toString() == entry.key);
+                      final price =
+                          double.tryParse(item['price'].toString()) ?? 0.0;
                       return sum + (price * entry.value);
                     },
                   );
@@ -224,13 +219,12 @@ class _MenuScreenState extends State<MenuScreen> {
                           trailing: Text("₹${total.toStringAsFixed(2)}"),
                         ),
                         ElevatedButton(
-                          
                           onPressed: placeOrder,
-                          child: _loading? const CircularProgressIndicator() : const Text("Place Order"),
+                          child: _loading
+                              ? const CircularProgressIndicator()
+                              : const Text("Place Order"),
                         ),
-                        SizedBox(
-                          height: 20
-                        )
+                        SizedBox(height: 20)
                       ],
                     ),
                   );
@@ -245,12 +239,13 @@ class _MenuScreenState extends State<MenuScreen> {
           Padding(
             padding: const EdgeInsets.all(18.0),
             child: TextField(
-              
               maxLines: 1,
-              decoration:  InputDecoration(
+              decoration: InputDecoration(
                 contentPadding: EdgeInsets.symmetric(horizontal: 10),
                 labelText: "Search",
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300, width: .5)),
+                border: OutlineInputBorder(
+                    borderSide:
+                        BorderSide(color: Colors.grey.shade300, width: .5)),
               ),
               onChanged: (value) {
                 setState(() {
@@ -264,7 +259,8 @@ class _MenuScreenState extends State<MenuScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : GridView.builder(
                     padding: const EdgeInsets.all(18.0),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       childAspectRatio: 0.8,
                       crossAxisSpacing: 8,
@@ -274,9 +270,7 @@ class _MenuScreenState extends State<MenuScreen> {
                     itemBuilder: (context, index) {
                       final item = filteredMenu[index];
                       return Card(
-                        
                         shape: Border.all(
-                         
                           color: Colors.grey.shade400,
                           width: .5,
                         ),
@@ -284,46 +278,55 @@ class _MenuScreenState extends State<MenuScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(flex: 3,
-                              child: CustomImageView(
-                                width: double.infinity,
-                                url: 
-                                
-                                item['image'].toString(),
-                                fit: BoxFit.cover,
-                                
-                              ),
-                            ),
-                            Expanded(
-                              flex: 4,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal:  8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(item['name'].toString(),
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                    Text("₹${item['price']}",
-                                        style: const TextStyle(color: Colors.green)),
-                                    Text(item['description'].toString(),
-                                        maxLines: 2, overflow: TextOverflow.ellipsis),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.remove),
-                                          onPressed: () => removeFromCart(item['id'].toString()),
-                                        ),
-                                        Text(cart[item['id'].toString()]?.toString() ?? "0"),
-                                        IconButton(
-                                          icon: const Icon(Icons.add),
-                                          onPressed: () => addToCart(item['id'].toString()),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                           
+// Replace the CachedNetworkImage with:
+buildImage(item['image'].toString()),
+      //                       CachedNetworkImage(
+      //                           height: 80,
+      //                           width: double.maxFinite,
+      //                            httpHeaders: const {
+      //   'Access-Control-Allow-Origin': '*',
+      // },
+      //                           fit: BoxFit.cover,
+      //                           imageUrl: item['image'].toString(),
+      //                           errorWidget: (context, url, error) =>
+      //                               Icon(Icons.image)),
+
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(item['name'].toString(),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  Text("₹${item['price']}",
+                                      style:
+                                          const TextStyle(color: Colors.green)),
+                                  Text(item['description'].toString(),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.remove),
+                                        onPressed: () => removeFromCart(
+                                            item['id'].toString()),
+                                      ),
+                                      Text(cart[item['id'].toString()]
+                                              ?.toString() ??
+                                          "0"),
+                                      IconButton(
+                                        icon: const Icon(Icons.add),
+                                        onPressed: () =>
+                                            addToCart(item['id'].toString()),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -337,14 +340,3 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
